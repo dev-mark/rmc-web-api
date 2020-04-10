@@ -3,6 +3,7 @@ const app = express();
 const nodemailer = require("nodemailer");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const { validateDetails } = require("./util/validators");
 
 app.use(cors());
 // support parsing of application/json type post data
@@ -15,43 +16,49 @@ require("dotenv").config();
 
 app.post("/api/email", (req, res) => {
   const { email, message, referrals, name } = req.body;
+  const { errors, valid } = validateDetails(req.body);
 
-  let transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL, // generated ethereal user
-      pass: process.env.PASSWORD, // generated ethereal password
-    },
-  });
+  if (valid) {
+    res.status(200).json({ message: "success" });
+    // let transporter = nodemailer.createTransport({
+    //   service: "gmail",
+    //   auth: {
+    //     user: process.env.EMAIL, // generated ethereal user
+    //     pass: process.env.PASSWORD, // generated ethereal password
+    //   },
+    // });
 
-  let messageFormat = `
-  <p>This message is from the RMCordoviz website</p>
+    // let messageFormat = `
+    // <p>This message is from the RMCordoviz website</p>
 
-  <p><strong>NAME: </strong}>  ${name}</p>
-  <p><strong>EMAIL: </strong>  ${email}</p>
-  <p><strong>REFERRALS: </strong>  ${referrals ? referrals : "N/A"}</p>
-  <p><strong>MESSAGE: </strong></p>
-  <p>   ${message}</p>
-  
-  `;
+    // <p><strong>NAME: </strong}>  ${name}</p>
+    // <p><strong>EMAIL: </strong>  ${email}</p>
+    // <p><strong>REFERRALS: </strong>  ${referrals ? referrals : "N/A"}</p>
+    // <p><strong>MESSAGE: </strong></p>
+    // <p>   ${message}</p>
 
-  let mailContent = {
-    from: "RMCordoviz Website <mark@rmcordoviz.com>", // sender address
-    to: "mark@rmcordoviz.com", // list of receivers
-    subject: "INQUIRY", // Subject line
-    text: `message: ${message} `, // plain text body
-    html: messageFormat,
-  };
+    // `;
 
-  //   //   send email
-  transporter.sendMail(mailContent, (err, data) => {
-    if (err) {
-      return res.status(500).json(err);
-    } else {
-      console.log("done");
-      return res.status(201).json({ message: "Email sent successfully." });
-    }
-  });
+    // let mailContent = {
+    //   from: "RMCordoviz Website <mark@rmcordoviz.com>", // sender address
+    //   to: "mark@rmcordoviz.com", // list of receivers
+    //   subject: "INQUIRY", // Subject line
+    //   text: `message: ${message} `, // plain text body
+    //   html: messageFormat,
+    // };
+
+    // //   send email
+    // transporter.sendMail(mailContent, (err, data) => {
+    //   if (err) {
+    //     return res.status(500).json(err);
+    //   } else {
+    //     console.log("done");
+    //     return res.status(201).json({ message: "Email sent successfully." });
+    //   }
+    // });
+  } else {
+    res.status(400).json(errors);
+  }
 });
 
 app.listen(process.env.PORT, () => {
