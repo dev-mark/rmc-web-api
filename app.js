@@ -1,17 +1,15 @@
 const express = require("express");
 const app = express();
 const nodemailer = require("nodemailer");
+const { google } = require("googleapis");
+const OAuth2 = google.auth.OAuth2;
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const { validateDetails } = require("./util/validators");
 
 app.use(cors());
-// support parsing of application/json type post data
 app.use(bodyParser.json());
-
-//support parsing of application/x-www-form-urlencoded post data
 app.use(bodyParser.urlencoded({ extended: true }));
-
 require("dotenv").config();
 
 app.post("/api/email", (req, res) => {
@@ -19,43 +17,55 @@ app.post("/api/email", (req, res) => {
   const { errors, valid } = validateDetails(req.body);
 
   if (valid) {
-    res.status(200).json({ message: "success" });
-    // let transporter = nodemailer.createTransport({
-    //   service: "gmail",
-    //   auth: {
-    //     user: process.env.EMAIL, // generated ethereal user
-    //     pass: process.env.PASSWORD, // generated ethereal password
-    //   },
-    // });
+    const oauth2Client = new OAuth2(
+      process.env.CLIENT_ID, // ClientID
+      process.env.CLIENT_SECRET, // Client Secret
+      "https://developers.google.com/oauthplayground" // Redirect URL
+    );
 
-    // let messageFormat = `
-    // <p>This message is from the RMCordoviz website</p>
+    oauth2Client.setCredentials({
+      refresh_token: process.env.REFRESH_TOKEN,
+    });
 
-    // <p><strong>NAME: </strong}>  ${name}</p>
-    // <p><strong>EMAIL: </strong>  ${email}</p>
-    // <p><strong>REFERRALS: </strong>  ${referrals ? referrals : "N/A"}</p>
-    // <p><strong>MESSAGE: </strong></p>
-    // <p>   ${message}</p>
+    const accessToken = oauth2Client.getAccessToken();
 
-    // `;
+    const smtpTransport = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        type: "OAuth2",
+        user: "mark@rmcordoviz.com",
+        clientId: process.env.CLIENT_ID,
+        clientSecret: process.env.CLIENT_SECRET,
+        refreshToken: process.env.REFRESH_TOKEN,
+        accessToken: accessToken,
+      },
+    });
 
-    // let mailContent = {
-    //   from: "RMCordoviz Website <mark@rmcordoviz.com>", // sender address
-    //   to: "mark@rmcordoviz.com", // list of receivers
-    //   subject: "INQUIRY", // Subject line
-    //   text: `message: ${message} `, // plain text body
-    //   html: messageFormat,
-    // };
+    const mailOptions = {
+      from: "RMCORDOVIZ WEBSITE <test@rmcordoviz.com>",
+      to: "mark@rmcordoviz.com",
+      subject: "RMC INQUIRY",
+      generateTextFromHTML: true,
+      html: `
+     <p>This message is from the RMCordoviz website</p>
+     <p><strong>NAME: </strong}>  ${name}</p>
+     <p><strong>EMAIL: </strong>  ${email}</p>
+     <p><strong>REFERRALS: </strong> ${referrals ? referrals : "N/A"} </p>
+     <p><strong>MESSAGE: </strong></p>
+     <p>   ${message}</p>
+     `,
+    };
 
-    // //   send email
-    // transporter.sendMail(mailContent, (err, data) => {
-    //   if (err) {
-    //     return res.status(500).json(err);
-    //   } else {
-    //     console.log("done");
-    //     return res.status(201).json({ message: "Email sent successfully." });
-    //   }
-    // });
+    smtpTransport.sendMail(mailOptions, (error, response) => {
+      if (error) {
+        smtpTransport.close();
+        res.status(201).json({ message: "Email sent successfully." });
+      } else {
+        console.log("done");
+        smtpTransport.close();
+        return res.status(201).json({ message: "Email sent successfully." });
+      }
+    });
   } else {
     res.status(400).json(errors);
   }
