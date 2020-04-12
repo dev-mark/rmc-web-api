@@ -13,40 +13,41 @@ app.use(bodyParser.urlencoded({ extended: true }));
 require("dotenv").config();
 
 app.post("/api/email", (req, res) => {
-  const { email, message, referrals, name } = req.body;
-  const { errors, valid } = validateDetails(req.body);
+  try {
+    const { email, message, referrals, name } = req.body;
+    const { errors, valid } = validateDetails(req.body);
 
-  if (valid) {
-    const oauth2Client = new OAuth2(
-      process.env.CLIENT_ID, // ClientID
-      process.env.CLIENT_SECRET, // Client Secret
-      "https://developers.google.com/oauthplayground" // Redirect URL
-    );
+    if (valid) {
+      const oauth2Client = new OAuth2(
+        process.env.CLIENT_ID, // ClientID
+        process.env.CLIENT_SECRET, // Client Secret
+        "https://developers.google.com/oauthplayground" // Redirect URL
+      );
 
-    oauth2Client.setCredentials({
-      refresh_token: process.env.REFRESH_TOKEN,
-    });
+      oauth2Client.setCredentials({
+        refresh_token: process.env.REFRESH_TOKEN,
+      });
 
-    const accessToken = oauth2Client.getAccessToken();
+      const accessToken = oauth2Client.getAccessToken();
 
-    const smtpTransport = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        type: "OAuth2",
-        user: "mark@rmcordoviz.com",
-        clientId: process.env.CLIENT_ID,
-        clientSecret: process.env.CLIENT_SECRET,
-        refreshToken: process.env.REFRESH_TOKEN,
-        accessToken: accessToken,
-      },
-    });
+      const smtpTransport = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          type: "OAuth2",
+          user: "mark@rmcordoviz.com",
+          clientId: process.env.CLIENT_ID,
+          clientSecret: process.env.CLIENT_SECRET,
+          refreshToken: process.env.REFRESH_TOKEN,
+          accessToken: accessToken,
+        },
+      });
 
-    const mailOptions = {
-      from: "RMCORDOVIZ WEBSITE <test@rmcordoviz.com>",
-      to: "mark@rmcordoviz.com",
-      subject: "RMC INQUIRY",
-      generateTextFromHTML: true,
-      html: `
+      const mailOptions = {
+        from: "RMCORDOVIZ WEBSITE <test@rmcordoviz.com>",
+        to: "mark@rmcordoviz.com",
+        subject: "RMC INQUIRY",
+        generateTextFromHTML: true,
+        html: `
      <p>This message is from the RMCordoviz website</p>
      <p><strong>NAME: </strong}>  ${name}</p>
      <p><strong>EMAIL: </strong>  ${email}</p>
@@ -54,20 +55,25 @@ app.post("/api/email", (req, res) => {
      <p><strong>MESSAGE: </strong></p>
      <p>   ${message}</p>
      `,
-    };
+      };
 
-    smtpTransport.sendMail(mailOptions, (error, response) => {
-      if (error) {
-        smtpTransport.close();
-        res.status(201).json({ message: "Email sent successfully." });
-      } else {
-        console.log("done");
-        smtpTransport.close();
-        return res.status(201).json({ message: "Email sent successfully." });
-      }
-    });
-  } else {
-    res.status(400).json(errors);
+      smtpTransport.sendMail(mailOptions, (error, response) => {
+        if (error) {
+          smtpTransport.close();
+          res.status(400).json({ error });
+        } else {
+          console.log("done");
+          smtpTransport.close();
+          return res.status(201).json({ message: "Email sent successfully." });
+        }
+      });
+    } else {
+      res.status(400).json(errors);
+    }
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ general: "Something went wrong. Please try again." });
   }
 });
 
