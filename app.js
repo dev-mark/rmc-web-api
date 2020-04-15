@@ -34,7 +34,7 @@ app.post("/api/email", (req, res) => {
         service: "gmail",
         auth: {
           type: "OAuth2",
-          user: "mark@rmcordoviz.com",
+          user: process.env.EMAIL,
           clientId: process.env.CLIENT_ID,
           clientSecret: process.env.CLIENT_SECRET,
           refreshToken: process.env.REFRESH_TOKEN,
