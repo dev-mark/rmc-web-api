@@ -62,7 +62,6 @@ app.post("/api/email", (req, res) => {
           smtpTransport.close();
           res.status(400).json({ error });
         } else {
-          console.log("done");
           smtpTransport.close();
           return res.status(201).json({ message: "Email sent successfully." });
         }
